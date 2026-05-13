@@ -123,6 +123,40 @@ body::before{
         opacity:1;
     }
 }
+
+/* ===== FLOATING WALLET UI ===== */
+.floating-ui{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:10px;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(10,10,20,0.6);
+  backdrop-filter:blur(15px);
+  border:1px solid rgba(0,255,255,0.2);
+  box-shadow:0 0 25px rgba(0,255,255,0.2);
+}
+
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+  background:linear-gradient(90deg, cyan, magenta);
+  color:#000;
+}
+
+/* responsive */
+@media(max-width:480px){
+  .scene{
+    width:170px;
+    height:170px;
+  }
+}
 </style>
 </head>
 
@@ -188,5 +222,63 @@ function playVideos(){
 }
 </script>
 
+<!-- WALLET UI -->
+<div class="floating-ui">
+  <appkit-button></appkit-button>
+  <button onclick="sendTx()">Send 0.0001 ETH</button>
+</div>
+
+<script type="module">
+import { createAppKit } from "https://esm.sh/@reown/appkit";
+import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers";
+import { mainnet, arbitrum } from "https://esm.sh/@reown/appkit/networks";
+import { BrowserProvider, parseEther } from "https://esm.sh/ethers";
+
+/* APPKIT */
+const modal = createAppKit({
+  adapters:[new EthersAdapter()],
+  networks:[mainnet, arbitrum],
+  projectId:"5022875ce6ee68917f103ff9b1e3422d"
+});
+
+let provider;
+
+modal.subscribeProviders((state)=>{
+  provider = state?.eip155;
+});
+
+/* SEND TX */
+window.sendTx = async () => {
+  if(!provider) return alert("Wallet belum connect");
+
+  const ethersProvider = new BrowserProvider(provider);
+  const signer = await ethersProvider.getSigner();
+
+  const tx = await signer.sendTransaction({
+    to:"0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88",
+    value:parseEther("0.0001")
+  });
+
+  alert("Transaction sent!");
+  console.log(tx);
+};
+
+/* ===== AUTO ROTATE CUBE ===== */
+const scene = document.getElementById("scene");
+
+let x = 0;
+let y = 0;
+
+function animate(){
+  x += 0.6;
+  y += 0.8;
+
+  scene.style.transform = `rotateX(${x}deg) rotateY(${y}deg)`;
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
 </body>
 </html>
