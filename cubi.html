@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cube Ultimate PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0a0a0a;
+    color:white;
+    text-align:center;
+    overflow:hidden;
+}
+
+/* INPUT PANEL */
+.panel{
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,0.6);
+    padding:10px;
+    border-radius:15px;
+    backdrop-filter:blur(10px);
+    z-index:10;
+}
+
+input{
+    padding:8px;
+    width:200px;
+    margin:3px;
+    border-radius:8px;
+}
+
+/* BUTTON */
+button{
+    padding:8px 10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:linear-gradient(90deg,cyan,magenta);
+    font-weight:bold;
+    margin:3px;
+}
+
+/* SCENE */
+.scene{
+    width:260px;
+    height:260px;
+    margin:120px auto;
+    transform-style:preserve-3d;
+}
+
+/* CUBE */
+.cube{
+    width:100%;
+    height:100%;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform 0.1s;
+}
+
+/* FACE */
+.face{
+    position:absolute;
+    width:260px;
+    height:260px;
+}
+
+.face video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.front{transform:translateZ(130px)}
+.back{transform:rotateY(180deg) translateZ(130px)}
+.right{transform:rotateY(90deg) translateZ(130px)}
+.left{transform:rotateY(-90deg) translateZ(130px)}
+.top{transform:rotateX(90deg) translateZ(130px)}
+.bottom{transform:rotateX(-90deg) translateZ(130px)}
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+    <input id="url" placeholder="Video / TikTok link">
+    <button onclick="generate()">Generate</button>
+    <button onclick="viewExample()">View Example</button>
+    <button onclick="exportAPK()">APK Builder</button>
+
+
+
+  <appkit-button></appkit-button>
+
+  <button onclick="sendTx()">Send 0.0001 ETH</button>
+
+  <script type="module">
+    import { createAppKit } from "https://esm.sh/@reown/appkit";
+    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers";
+    import { mainnet, arbitrum } from "https://esm.sh/@reown/appkit/networks";
+    import { BrowserProvider, parseEther } from "https://esm.sh/ethers";
+
+    const projectId = "5022875ce6ee68917f103ff9b1e3422d";
+
+    const metadata = {
+      name: "AppKit",
+      description: "AppKit Example",
+      url: window.location.origin,
+      icons: ["https://avatars.githubusercontent.com/u/179229932"],
+    };
+
+    // CREATE APPKIT (ONLY ONCE)
+    const modal = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [mainnet, arbitrum],
+      metadata,
+      projectId,
+      features: {
+        analytics: true,
+      },
+    });
+
+    let provider;
+
+    // GET PROVIDER WHEN READY
+    modal.subscribeProviders((state) => {
+      provider = state?.eip155;
+    });
+
+    window.modal = modal;
+    window.provider = provider;
+
+    // SEND TRANSACTION FUNCTION
+    window.sendTx = async function () {
+      try {
+        if (!provider) {
+          alert("Wallet belum connect");
+          return;
+        }
+
+        const ethersProvider = new BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+
+        const tx = await signer.sendTransaction({
+          to: "0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88",
+          value: parseEther("0.0001"),
+        });
+
+        console.log("TX:", tx);
+        alert("Transaction sent!");
+      } catch (err) {
+        console.error(err);
+        alert("Transaction failed");
+      }
+    };
+  </script>
+
+
+</div>
+
+<div class="scene" id="scene">
+    <div class="cube" id="cube"></div>
+</div>
+
+<script>
+
+/* =========================
+   EXAMPLE
+========================= */
+function viewExample(){
+    document.getElementById("cube").innerHTML = `
+    <div class="face front"><video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted></video></div>
+    <div class="face back"><video src="https://www.w3schools.com/html/movie.mp4" autoplay loop muted></video></div>
+    <div class="face right"><video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted></video></div>
+    <div class="face left"><video src="https://www.w3schools.com/html/movie.mp4" autoplay loop muted></video></div>
+    <div class="face top"><video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted></video></div>
+    <div class="face bottom"><video src="https://www.w3schools.com/html/movie.mp4" autoplay loop muted></video></div>
+    `;
+}
+
+/* =========================
+   GENERATE (TikTok SIMULATION)
+========================= */
+function generate(){
+    let url = document.getElementById("url").value;
+
+    // SIMULASI TIKTOK -> VIDEO
+    let video = url.includes("tiktok")
+        ? "https://www.w3schools.com/html/mov_bbb.mp4"
+        : url;
+
+    let cube = document.getElementById("cube");
+
+    cube.innerHTML = `
+    <div class="face front"><video autoplay loop muted src="${video}"></video></div>
+    <div class="face back"><video autoplay loop muted src="${video}"></video></div>
+    <div class="face right"><video autoplay loop muted src="${video}"></video></div>
+    <div class="face left"><video autoplay loop muted src="${video}"></video></div>
+    <div class="face top"><video autoplay loop muted src="${video}"></video></div>
+    <div class="face bottom"><video autoplay loop muted src="${video}"></video></div>
+    `;
+}
+
+/* =========================
+   DRAG / FINGER ROTATION
+========================= */
+let scene = document.getElementById("scene");
+let rotX = 0, rotY = 0;
+let dragging = false;
+let lastX, lastY;
+
+scene.addEventListener("mousedown", e=>{
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+window.addEventListener("mouseup", ()=> dragging=false);
+
+window.addEventListener("mousemove", e=>{
+    if(!dragging) return;
+
+    rotY += (e.clientX - lastX) * 0.5;
+    rotX -= (e.clientY - lastY) * 0.5;
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    document.getElementById("cube").style.transform =
+        `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+});
+
+/* TOUCH (HP) */
+scene.addEventListener("touchmove", e=>{
+    let t = e.touches[0];
+
+    rotY += t.clientX * 0.01;
+    rotX -= t.clientY * 0.01;
+
+    document.getElementById("cube").style.transform =
+        `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+});
+
+/* =========================
+   SOUND REACTIVE
+========================= */
+navigator.mediaDevices?.getUserMedia({audio:true})
+.then(stream=>{
+    let audioCtx = new AudioContext();
+    let analyser = audioCtx.createAnalyser();
+    let mic = audioCtx.createMediaStreamSource(stream);
+    mic.connect(analyser);
+
+    let data = new Uint8Array(analyser.frequencyBinCount);
+
+    function soundLoop(){
+        analyser.getByteFrequencyData(data);
+
+        let volume = data.reduce((a,b)=>a+b)/data.length;
+
+        let scale = 1 + volume/500;
+
+        document.getElementById("cube").style.transform +=
+            ` scale(${scale})`;
+
+        requestAnimationFrame(soundLoop);
+    }
+
+    soundLoop();
+})
+.catch(()=>{});
+
+/* =========================
+   APK BUILDER (WEBVIEW PACKAGE)
+========================= */
+function exportAPK(){
+
+    let html = document.documentElement.outerHTML;
+
+    let apkTemplate = `
+ANDROID WEBVIEW PACKAGE
+========================
+1. Masukkan file ini ke assets/index.html
+2. Gunakan WebView load file:///android_asset/index.html
+3. Build di Android Studio
+========================
+
+${html}
+`;
+
+    let blob = new Blob([apkTemplate], {type:"text/plain"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "cube-apk-ready.txt";
+    a.click();
+}
+</script>
+
+</body>
+</html>

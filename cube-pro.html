@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Video Cube Generator PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0b0b0b;
+    color:white;
+    text-align:center;
+    padding:15px;
+}
+
+h2{color:cyan}
+
+input, button{
+    margin:5px;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+}
+
+input{
+    width:90%;
+}
+
+button{
+    background:linear-gradient(90deg, cyan, magenta);
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    max-width:600px;
+    margin:auto;
+}
+
+.thumb{
+    width:100%;
+    height:80px;
+    background:#222;
+    border-radius:10px;
+    overflow:hidden;
+    position:relative;
+}
+
+.thumb video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.scene{
+    width:250px;
+    height:250px;
+    margin:20px auto;
+    transform-style:preserve-3d;
+    animation:spin 10s linear infinite;
+}
+
+.cube{
+    width:100%;
+    height:100%;
+    position:relative;
+    transform-style:preserve-3d;
+}
+
+.face{
+    position:absolute;
+    width:250px;
+    height:250px;
+}
+
+.face video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.front{transform:translateZ(125px)}
+.back{transform:rotateY(180deg) translateZ(125px)}
+.right{transform:rotateY(90deg) translateZ(125px)}
+.left{transform:rotateY(-90deg) translateZ(125px)}
+.top{transform:rotateX(90deg) translateZ(125px)}
+.bottom{transform:rotateX(-90deg) translateZ(125px)}
+
+@keyframes spin{
+    0%{transform:rotateX(0) rotateY(0)}
+    100%{transform:rotateX(360deg) rotateY(360deg)}
+}
+
+.controls{
+    margin:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎥 Video Cube PRO</h2>
+
+<p>Input 6 Video URL atau Upload</p>
+
+<div class="grid">
+<input placeholder="Front" id="f">
+<input placeholder="Back" id="b">
+<input placeholder="Right" id="r">
+<input placeholder="Left" id="l">
+<input placeholder="Top" id="t">
+<input placeholder="Bottom" id="bo">
+</div>
+
+<br>
+
+<button onclick="generate()">Generate Cube</button>
+<button onclick="toggle()">Play/Pause Cube</button>
+<button onclick="exportHTML()">Export APK Ready HTML</button>
+
+
+  <appkit-button></appkit-button>
+
+  <button onclick="sendTx()">Send 0.0001 ETH</button>
+
+  <script type="module">
+    import { createAppKit } from "https://esm.sh/@reown/appkit";
+    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers";
+    import { mainnet, arbitrum } from "https://esm.sh/@reown/appkit/networks";
+    import { BrowserProvider, parseEther } from "https://esm.sh/ethers";
+
+    const projectId = "5022875ce6ee68917f103ff9b1e3422d";
+
+    const metadata = {
+      name: "AppKit",
+      description: "AppKit Example",
+      url: window.location.origin,
+      icons: ["https://avatars.githubusercontent.com/u/179229932"],
+    };
+
+    // CREATE APPKIT (ONLY ONCE)
+    const modal = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [mainnet, arbitrum],
+      metadata,
+      projectId,
+      features: {
+        analytics: true,
+      },
+    });
+
+    let provider;
+
+    // GET PROVIDER WHEN READY
+    modal.subscribeProviders((state) => {
+      provider = state?.eip155;
+    });
+
+    window.modal = modal;
+    window.provider = provider;
+
+    // SEND TRANSACTION FUNCTION
+    window.sendTx = async function () {
+      try {
+        if (!provider) {
+          alert("Wallet belum connect");
+          return;
+        }
+
+        const ethersProvider = new BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+
+        const tx = await signer.sendTransaction({
+          to: "0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88",
+          value: parseEther("0.0001"),
+        });
+
+        console.log("TX:", tx);
+        alert("Transaction sent!");
+      } catch (err) {
+        console.error(err);
+        alert("Transaction failed");
+      }
+    };
+  </script>
+
+
+<h3>Upload Video (HP)</h3>
+<input type="file" accept="video/*" multiple onchange="upload(event)">
+
+<div class="grid" id="preview"></div>
+
+<div class="scene" id="scene">
+<div class="cube" id="cube"></div>
+</div>
+
+<script>
+let running = true;
+let urls = {f:"",b:"",r:"",l:"",t:"",bo:""};
+
+function upload(e){
+    let files = e.target.files;
+    let preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    [...files].forEach((file,i)=>{
+        let url = URL.createObjectURL(file);
+
+        let div = document.createElement("div");
+        div.className = "thumb";
+        div.innerHTML = `<video src="${url}" muted autoplay loop></video>`;
+        preview.appendChild(div);
+
+        let keys = ["f","b","r","l","t","bo"];
+        urls[keys[i]] = url;
+    });
+}
+
+function generate(){
+    urls.f = document.getElementById("f").value || urls.f;
+    urls.b = document.getElementById("b").value || urls.b;
+    urls.r = document.getElementById("r").value || urls.r;
+    urls.l = document.getElementById("l").value || urls.l;
+    urls.t = document.getElementById("t").value || urls.t;
+    urls.bo = document.getElementById("bo").value || urls.bo;
+
+    let cube = document.getElementById("cube");
+
+    cube.innerHTML = `
+    <div class="face front"><video autoplay loop muted src="${urls.f}"></video></div>
+    <div class="face back"><video autoplay loop muted src="${urls.b}"></video></div>
+    <div class="face right"><video autoplay loop muted src="${urls.r}"></video></div>
+    <div class="face left"><video autoplay loop muted src="${urls.l}"></video></div>
+    <div class="face top"><video autoplay loop muted src="${urls.t}"></video></div>
+    <div class="face bottom"><video autoplay loop muted src="${urls.bo}"></video></div>
+    `;
+}
+
+function toggle(){
+    let scene = document.getElementById("scene");
+    running = !running;
+    scene.style.animation = running ? "spin 10s linear infinite" : "none";
+}
+
+function exportHTML(){
+    let html = document.documentElement.outerHTML;
+    let blob = new Blob([html], {type:"text/html"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "cube-pro.html";
+    a.click();
+}
+</script>
+
+</body>
+</html>

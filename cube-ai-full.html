@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cube AI FULL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:#000;
+    font-family:Arial;
+    color:white;
+}
+
+/* UI PANEL */
+#ui{
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+    background:rgba(0,0,0,0.6);
+    padding:8px;
+    border-radius:12px;
+    backdrop-filter:blur(10px);
+    z-index:10;
+}
+
+input{
+    padding:6px;
+    border-radius:8px;
+    border:none;
+    width:180px;
+}
+
+button{
+    padding:6px 10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+    background:linear-gradient(90deg,cyan,magenta);
+}
+
+/* INFO */
+#info{
+    position:fixed;
+    bottom:10px;
+    left:10px;
+    font-size:12px;
+    opacity:0.6;
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+<input id="url" placeholder="Video / TikTok link">
+<button onclick="generate()">Generate</button>
+<button onclick="example()">Example</button>
+<button onclick="toggle()">Play/Pause</button>
+<button onclick="save()">Save</button>
+<button onclick="exportHTML()">Export APK</button>
+
+
+  <appkit-button></appkit-button>
+
+  <button onclick="sendTx()">Send 0.0001 ETH</button>
+
+  <script type="module">
+    import { createAppKit } from "https://esm.sh/@reown/appkit";
+    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers";
+    import { mainnet, arbitrum } from "https://esm.sh/@reown/appkit/networks";
+    import { BrowserProvider, parseEther } from "https://esm.sh/ethers";
+
+    const projectId = "5022875ce6ee68917f103ff9b1e3422d";
+
+    const metadata = {
+      name: "AppKit",
+      description: "AppKit Example",
+      url: window.location.origin,
+      icons: ["https://avatars.githubusercontent.com/u/179229932"],
+    };
+
+    // CREATE APPKIT (ONLY ONCE)
+    const modal = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [mainnet, arbitrum],
+      metadata,
+      projectId,
+      features: {
+        analytics: true,
+      },
+    });
+
+    let provider;
+
+    // GET PROVIDER WHEN READY
+    modal.subscribeProviders((state) => {
+      provider = state?.eip155;
+    });
+
+    window.modal = modal;
+    window.provider = provider;
+
+    // SEND TRANSACTION FUNCTION
+    window.sendTx = async function () {
+      try {
+        if (!provider) {
+          alert("Wallet belum connect");
+          return;
+        }
+
+        const ethersProvider = new BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+
+        const tx = await signer.sendTransaction({
+          to: "0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88",
+          value: parseEther("0.0001"),
+        });
+
+        console.log("TX:", tx);
+        alert("Transaction sent!");
+      } catch (err) {
+        console.error(err);
+        alert("Transaction failed");
+      }
+    };
+  </script>
+
+
+</div>
+
+<div id="info">Drag / swipe untuk rotate cube</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
+
+<script>
+/* =========================
+   SETUP SCENE
+========================= */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+camera.position.z = 5;
+
+/* =========================
+   VIDEO CUBE
+========================= */
+let video = document.createElement("video");
+video.loop = true;
+video.muted = true;
+video.autoplay = true;
+
+video.src = "https://www.w3schools.com/html/mov_bbb.mp4";
+video.play();
+
+let texture = new THREE.VideoTexture(video);
+
+let cube = new THREE.Mesh(
+    new THREE.BoxGeometry(2,2,2),
+    new THREE.MeshBasicMaterial({map:texture})
+);
+
+scene.add(cube);
+
+/* =========================
+   DRAG / SWIPE CONTROL
+========================= */
+let dragging=false;
+let lastX=0,lastY=0;
+
+document.addEventListener("mousedown",e=>{
+    dragging=true;
+    lastX=e.clientX;
+    lastY=e.clientY;
+});
+
+document.addEventListener("mouseup",()=>dragging=false);
+
+document.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+
+    cube.rotation.y += (e.clientX-lastX)*0.01;
+    cube.rotation.x += (e.clientY-lastY)*0.01;
+
+    lastX=e.clientX;
+    lastY=e.clientY;
+});
+
+/* TOUCH SUPPORT */
+document.addEventListener("touchmove",e=>{
+    let t=e.touches[0];
+    cube.rotation.y += t.clientX*0.0005;
+    cube.rotation.x += t.clientY*0.0005;
+});
+
+/* =========================
+   VIDEO GENERATOR
+========================= */
+function generate(){
+    let url=document.getElementById("url").value;
+    if(!url) return alert("Masukkan URL");
+
+    // TikTok SIMULATION
+    if(url.includes("tiktok")){
+        url="https://www.w3schools.com/html/mov_bbb.mp4";
+    }
+
+    video.src=url;
+    video.play();
+}
+
+/* =========================
+   EXAMPLE
+========================= */
+function example(){
+    video.src="https://www.w3schools.com/html/movie.mp4";
+    video.play();
+}
+
+/* =========================
+   PLAY / PAUSE
+========================= */
+let playing=true;
+function toggle(){
+    if(playing){
+        video.pause();
+    }else{
+        video.play();
+    }
+    playing=!playing;
+}
+
+/* =========================
+   SAVE (LOCAL CLOUD)
+========================= */
+function save(){
+    localStorage.setItem("cube_video",video.src);
+    alert("Saved!");
+}
+
+let saved=localStorage.getItem("cube_video");
+if(saved){
+    video.src=saved;
+}
+
+/* =========================
+   SOUND REACTIVE
+========================= */
+navigator.mediaDevices?.getUserMedia({audio:true})
+.then(stream=>{
+    let ctx=new AudioContext();
+    let analyser=ctx.createAnalyser();
+    let mic=ctx.createMediaStreamSource(stream);
+
+    mic.connect(analyser);
+
+    let data=new Uint8Array(analyser.frequencyBinCount);
+
+    function loop(){
+        analyser.getByteFrequencyData(data);
+
+        let avg=data.reduce((a,b)=>a+b)/data.length;
+
+        let scale=1+avg/400;
+
+        cube.scale.set(scale,scale,scale);
+
+        requestAnimationFrame(loop);
+    }
+
+    loop();
+});
+
+/* =========================
+   ANIMATION LOOP
+========================= */
+function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
+}
+animate();
+
+/* =========================
+   EXPORT APK (WEBVIEW READY)
+========================= */
+function exportHTML(){
+    let html=document.documentElement.outerHTML;
+
+    let blob=new Blob([html],{type:"text/html"});
+    let a=document.createElement("a");
+
+    a.href=URL.createObjectURL(blob);
+    a.download="cube-ai-full.html";
+    a.click();
+}
+</script>
+
+</body>
+</html>
