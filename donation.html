@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Donation</title>
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background:#0f172a;
+      color:white;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+      margin:0;
+    }
+
+    .card{
+      width:400px;
+      background:#1e293b;
+      padding:25px;
+      border-radius:20px;
+      box-shadow:0 0 20px rgba(0,0,0,.4);
+    }
+
+    h2{
+      text-align:center;
+      margin-bottom:20px;
+    }
+
+    .wallet{
+      background:#111827;
+      padding:10px;
+      border-radius:10px;
+      word-break:break-all;
+      font-size:13px;
+      margin-bottom:20px;
+      text-align:center;
+    }
+
+    .donation-buttons{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-bottom:20px;
+    }
+
+    .donation-buttons button{
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:#2563eb;
+      color:white;
+      cursor:pointer;
+      font-weight:bold;
+    }
+
+    .donation-buttons button:hover{
+      background:#1d4ed8;
+    }
+
+    input, textarea{
+      width:100%;
+      padding:12px;
+      margin-bottom:12px;
+      border:none;
+      border-radius:10px;
+      background:#334155;
+      color:white;
+      box-sizing:border-box;
+    }
+
+    .pay-btn{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#16a34a;
+      color:white;
+      font-size:16px;
+      font-weight:bold;
+      cursor:pointer;
+    }
+
+    .pay-btn:hover{
+      background:#15803d;
+    }
+
+    .download-btn{
+      width:100%;
+      margin-top:10px;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#f59e0b;
+      color:white;
+      font-size:15px;
+      cursor:pointer;
+    }
+
+    .qr-box{
+      text-align:center;
+      margin-top:20px;
+    }
+
+    .qr-box img{
+      width:220px;
+      background:white;
+      padding:10px;
+      border-radius:10px;
+    }
+
+    appkit-button{
+      display:block;
+      margin-bottom:20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <h2>💎 Crypto Donation</h2>
+
+  <div class="wallet">
+    Wallet Donation:<br>
+    0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88
+  </div>
+
+  <!-- CONNECT BUTTON -->
+  <appkit-button></appkit-button>
+
+  <!-- DONATION OPTIONS -->
+  <div class="donation-buttons">
+    <button onclick="setAmount(0.001)">0.001 ETH</button>
+    <button onclick="setAmount(0.005)">0.005 ETH</button>
+    <button onclick="setAmount(0.01)">0.01 ETH</button>
+  </div>
+
+  <!-- SPONSOR FORM -->
+  <input type="text" id="nama" placeholder="Nama Sponsor">
+  <input type="email" id="email" placeholder="Email">
+  <input type="text" id="hp" placeholder="No HP">
+  <textarea id="alamat" placeholder="Alamat"></textarea>
+  <input type="text" id="rek" placeholder="No Rekening">
+
+  <input type="number" id="amount" placeholder="Jumlah Donasi ETH">
+
+  <button class="pay-btn" onclick="sendTx()">
+    🚀 Pay Now
+  </button>
+
+  <button class="download-btn" onclick="downloadQR()">
+    ⬇ Download QR Payment
+  </button>
+
+  <!-- QR -->
+  <div class="qr-box">
+    <img
+      id="qrImage"
+      src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=ethereum:0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88"
+    />
+  </div>
+
+</div>
+
+<script type="module">
+  import { createAppKit } from "https://esm.sh/@reown/appkit";
+  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers";
+  import { mainnet, arbitrum } from "https://esm.sh/@reown/appkit/networks";
+  import { BrowserProvider, parseEther } from "https://esm.sh/ethers";
+
+  const projectId = "5022875ce6ee68917f103ff9b1e3422d";
+
+  const metadata = {
+    name: "Crypto Donation",
+    description: "Donation DApp",
+    url: window.location.origin,
+    icons: ["https://avatars.githubusercontent.com/u/179229932"]
+  };
+
+  // CREATE APPKIT
+  const modal = createAppKit({
+    adapters: [new EthersAdapter()],
+    networks: [mainnet, arbitrum],
+    metadata,
+    projectId,
+    features: {
+      analytics: true
+    }
+  });
+
+  let provider;
+
+  // GET PROVIDER
+  modal.subscribeProviders((state) => {
+    provider = state?.eip155;
+  });
+
+  // SET DONATION
+  window.setAmount = function(amount){
+    document.getElementById("amount").value = amount;
+  }
+
+  // SEND TX
+  window.sendTx = async function () {
+
+    try {
+
+      if (!provider) {
+        alert("Wallet belum connect");
+        return;
+      }
+
+      const nama = document.getElementById("nama").value;
+      const email = document.getElementById("email").value;
+      const hp = document.getElementById("hp").value;
+      const alamat = document.getElementById("alamat").value;
+      const rek = document.getElementById("rek").value;
+      const amount = document.getElementById("amount").value;
+
+      if(!nama || !email || !hp || !alamat || !rek || !amount){
+        alert("Lengkapi data sponsor");
+        return;
+      }
+
+      const ethersProvider = new BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+
+      const tx = await signer.sendTransaction({
+        to: "0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88",
+        value: parseEther(amount),
+      });
+
+      console.log("TX:", tx);
+
+      alert(
+        "Donasi berhasil dikirim!\\n\\nTX Hash:\\n" + tx.hash
+      );
+
+    } catch (err) {
+      console.error(err);
+      alert("Transaction gagal");
+    }
+  };
+
+  // DOWNLOAD QR
+  window.downloadQR = function(){
+
+    const img = document.getElementById("qrImage");
+
+    const link = document.createElement("a");
+    link.href = img.src;
+    link.download = "qr-payment.png";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+</script>
+
+</body>
+</html>
